@@ -1,0 +1,36 @@
+pipeline {
+    agent any
+    environment {
+        AZURE_CREDENTIALS = credentials('jenkinsapp')  // Use stored Azure credentials
+        AZURE_APP_NAME = 'jenkinstest'  // Change to your Azure Web App name
+        RESOURCE_GROUP = 'Testdel'
+    }
+    stages {
+        stage('Checkout Code') {
+            steps {
+                git 'https://github.com/example/dotnet-sample-app.git'
+            }
+        }
+        stage('Build') {
+            steps {
+                sh 'dotnet build --configuration Release'
+            }
+        }
+        stage('Publish') {
+            steps {
+                sh 'dotnet publish -c Release -o published'
+            }
+        }
+        stage('Deploy to Azure') {
+            steps {
+                withAzureCLI(credentialsId: 'jenkins-sp') {
+                    sh '''
+                    az webapp deploy --resource-group $RESOURCE_GROUP \
+                                     --name $AZURE_APP_NAME \
+                                     --src-path published
+                    '''
+                }
+            }
+        }
+    }
+}
